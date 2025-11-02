@@ -7,6 +7,7 @@ export interface ContableUser {
   nombre: string
   email?: string
   telefono?: string
+  telegram_chat_id?: string
   tipo_usuario: string
   moneda_preferida: string
   fecha_creacion: string
@@ -131,7 +132,8 @@ export interface CreateAdviceRequest {
 // =====================================================
 
 export interface N8nWebhookData {
-  telefono: string
+  chat_id?: string
+  telefono?: string
   tipo: 'ingreso' | 'gasto' | 'inversion' | 'ahorro'
   monto: number
   descripcion?: string

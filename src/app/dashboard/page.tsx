@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -31,6 +32,7 @@ import type { ContableTransaction, ContableKPISummary, ContableAdvice } from '@/
 
 export default function DashboardPage() {
   const { user, signOut, getSession } = useAuth()
+  const router = useRouter()
   const [transactions, setTransactions] = useState<ContableTransaction[]>([])
   const [kpis, setKpis] = useState<ContableKPISummary[]>([])
   const [advice, setAdvice] = useState<ContableAdvice[]>([])
@@ -384,6 +386,14 @@ export default function DashboardPage() {
             Nueva Transacción
           </Button>
 
+          <Button 
+            onClick={() => router.push('/profile')}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <User className="h-4 w-4" />
+            Mi Perfil
+          </Button>
           <Button 
             onClick={signOut}
             variant="outline"

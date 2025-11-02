@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { 
-  findUserByPhoneServer, 
+  findUserByPhoneServer,
+  findUserByChatIdServer,
   createUserIfNotExistsServer, 
   createTransactionServer, 
-  logAuditActionServer 
+  logAuditActionServer,
+  supabaseServer
 } from '@/lib/database-server'
-import type { ApiResponse, N8nWebhookData } from '@/lib/types'
+import type { ApiResponse, N8nWebhookData, ContableUser } from '@/lib/types'
 
 // POST /api/webhook/n8n - Webhook para n8n
 export async function POST(request: NextRequest) {
@@ -33,11 +35,11 @@ export async function POST(request: NextRequest) {
     // Parsear datos del webhook
     const webhookData: N8nWebhookData = await request.json()
 
-    // Validar datos requeridos
-    if (!webhookData.telefono) {
+    // Validar datos requeridos (chat_id O telefono)
+    if (!webhookData.chat_id && !webhookData.telefono) {
       const response: ApiResponse = {
         success: false,
-        error: 'telefono es requerido'
+        error: 'chat_id o telefono es requerido'
       }
       return NextResponse.json(response, { status: 400 })
     }
@@ -58,18 +60,53 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 400 })
     }
 
-    // Normalizar teléfono (remover espacios, guiones, etc.)
-    const normalizedPhone = webhookData.telefono.replace(/[\s\-\(\)]/g, '')
+    // Buscar usuario: PRIMERO por chat_id (preferido), luego por teléfono
+    let user: ContableUser | null = null
 
-    // Buscar usuario por teléfono
-    let user = await findUserByPhoneServer(normalizedPhone)
+    if (webhookData.chat_id) {
+      // Prioridad 1: Buscar por telegram_chat_id
+      user = await findUserByChatIdServer(webhookData.chat_id)
+      
+      if (!user && webhookData.telefono) {
+        // Si no existe pero hay teléfono, buscar por teléfono
+        const normalizedPhone = webhookData.telefono.replace(/[\s\-\(\)]/g, '')
+        user = await findUserByPhoneServer(normalizedPhone)
+        
+        // Si encontramos por teléfono, actualizar con chat_id
+        if (user) {
+          const { error: updateError } = await supabaseServer
+            .from('contable_users')
+            .update({ telegram_chat_id: webhookData.chat_id })
+            .eq('id', user.id)
+          
+          if (!updateError) {
+            user.telegram_chat_id = webhookData.chat_id
+          }
+        }
+      }
+    } else if (webhookData.telefono) {
+      // Si no hay chat_id, buscar solo por teléfono
+      const normalizedPhone = webhookData.telefono.replace(/[\s\-\(\)]/g, '')
+      user = await findUserByPhoneServer(normalizedPhone)
+    }
 
     // Si no existe el usuario, crearlo
     if (!user) {
-      user = await createUserIfNotExistsServer({
-        nombre: `Usuario ${normalizedPhone}`,
-        telefono: normalizedPhone
-      })
+      const userData: { nombre: string; telefono?: string; telegram_chat_id?: string } = {
+        nombre: webhookData.chat_id 
+          ? `Usuario Telegram ${webhookData.chat_id}` 
+          : (webhookData.telefono ? `Usuario ${webhookData.telefono.replace(/[\s\-\(\)]/g, '')}` : 'Usuario Telegram'),
+      }
+      
+      if (webhookData.telefono) {
+        userData.telefono = webhookData.telefono.replace(/[\s\-\(\)]/g, '')
+      }
+      
+      if (webhookData.chat_id) {
+        userData.telegram_chat_id = webhookData.chat_id
+      }
+
+      user = await createUserIfNotExistsServer(userData)
 
       if (!user) {
         const response: ApiResponse = {
@@ -82,7 +119,11 @@ export async function POST(request: NextRequest) {
       // Registrar creación de usuario
       await logAuditActionServer(
         'user_created_via_webhook',
-        { telefono: normalizedPhone, origen: 'n8n' },
+        { 
+          chat_id: webhookData.chat_id,
+          telefono: webhookData.telefono,
+          origen: 'n8n' 
+        },
         user.id
       )
     }

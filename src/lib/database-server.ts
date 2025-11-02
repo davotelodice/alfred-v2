@@ -23,7 +23,18 @@ export async function findUserByPhoneServer(telefono: string) {
   return data as ContableUser | null
 }
 
-export async function createUserIfNotExistsServer(userData: { nombre: string; telefono: string; email?: string }) {
+export async function findUserByChatIdServer(chatId: string) {
+  const { data, error } = await supabaseServer
+    .from('contable_users')
+    .select('*')
+    .eq('telegram_chat_id', chatId)
+    .single()
+
+  if (error && error.code !== 'PGRST116') throw error
+  return data as ContableUser | null
+}
+
+export async function createUserIfNotExistsServer(userData: { nombre: string; telefono?: string; email?: string; telegram_chat_id?: string }) {
   const { data, error } = await supabaseServer
     .from('contable_users')
     .insert(userData)
