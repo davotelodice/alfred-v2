@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getUserKPIs } from '@/lib/database'
 import type { ApiResponse, KPIFilters } from '@/lib/types'
 
+// Forzar ruta dinámica
+export const dynamic = 'force-dynamic'
+
 // GET /api/kpis - Obtener KPIs del usuario
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = request.nextUrl
     
     const filters: KPIFilters = {
       periodo: searchParams.get('periodo') || undefined,

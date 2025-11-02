@@ -15,8 +15,7 @@ import {
   Lightbulb,
   LogOut,
   User,
-  Edit,
-  X
+  Edit
 } from 'lucide-react'
 import { 
   getUserTransactions, 
@@ -28,7 +27,7 @@ import {
   getAvailablePeriods
 } from '@/lib/database'
 import { useAuth } from '@/components/AuthProvider'
-import type { ContableTransaction, ContableKPISummary, ContableAdvice, CreateTransactionRequest } from '@/lib/types'
+import type { ContableTransaction, ContableKPISummary, ContableAdvice } from '@/lib/types'
 
 export default function DashboardPage() {
   const { user, signOut, getSession } = useAuth()
@@ -63,6 +62,7 @@ export default function DashboardPage() {
   // Cargar datos iniciales
   useEffect(() => {
     loadDashboardData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPeriod])
 
   const loadDashboardData = async () => {
@@ -168,7 +168,8 @@ export default function DashboardPage() {
       setShowTransactionForm(false)
       
       alert('¡Transacción guardada exitosamente!')
-    } catch (error) {
+    } catch (err) {
+      const error = err as Error
       console.error('Error al guardar transacción:', error)
       alert(`Error al guardar la transacción: ${error.message || 'Error desconocido'}`)
     }
@@ -253,7 +254,8 @@ export default function DashboardPage() {
       })
 
       alert('¡Transacción actualizada exitosamente!')
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as Error
       console.error('Error al actualizar transacción:', error)
       alert(`Error al actualizar la transacción: ${error.message || 'Error desconocido'}`)
     }
@@ -303,7 +305,8 @@ export default function DashboardPage() {
       await loadAdvice()
 
       alert(`¡Se generaron ${data.data?.saved || 0} consejos financieros!`)
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as Error
       console.error('Error al generar consejos:', error)
       alert(`Error al generar consejos: ${error.message || 'Error desconocido'}`)
     } finally {
@@ -501,7 +504,7 @@ export default function DashboardPage() {
                             <select
                               className="w-full p-1 border rounded text-sm"
                               value={editForm.tipo}
-                              onChange={(e) => setEditForm({ ...editForm, tipo: e.target.value as any })}
+                              onChange={(e) => setEditForm({ ...editForm, tipo: e.target.value as 'ingreso' | 'gasto' | 'inversion' | 'ahorro' | 'transferencia' })}
                             >
                               <option value="ingreso">Ingreso</option>
                               <option value="gasto">Gasto</option>
@@ -671,14 +674,13 @@ export default function DashboardPage() {
             <CardTitle>Nueva Transacción</CardTitle>
           </CardHeader>
           <CardContent>
-            {console.log('Formulario renderizado, estado actual:', transactionForm)}
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Tipo</label>
                 <select 
                   className="w-full p-2 border rounded-md"
                   value={transactionForm.tipo}
-                  onChange={(e) => setTransactionForm(prev => ({ ...prev, tipo: e.target.value as any }))}
+                  onChange={(e) => setTransactionForm(prev => ({ ...prev, tipo: e.target.value as 'ingreso' | 'gasto' | 'inversion' | 'ahorro' | 'transferencia' }))}
                 >
                   <option value="ingreso">Ingreso</option>
                   <option value="gasto">Gasto</option>

@@ -5,6 +5,9 @@ import type {
   CreateTransactionRequest
 } from './types'
 
+// Exportar supabaseServer para uso en API routes
+export { supabaseServer }
+
 // =====================================================
 // FUNCIONES SERVIDOR (SIN RLS - SERVICE ROLE)
 // =====================================================

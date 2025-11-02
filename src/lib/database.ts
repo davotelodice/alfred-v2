@@ -3,7 +3,6 @@ import type {
   ContableTransaction, 
   ContableKPISummary, 
   ContableAdvice, 
-  ContableUser,
   ContableCategory,
   CreateTransactionRequest,
   CreateAdviceRequest,

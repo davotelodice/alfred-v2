@@ -4,6 +4,8 @@
 // Este archivo contiene los prompts del sistema para
 // el agente de IA que genera consejos financieros
 
+import type { ContableKPISummary, ContableTransaction } from './types'
+
 export const FINANCIAL_ADVISOR_PROMPTS = {
   // Prompt del sistema principal
   system: `Eres un experto asesor financiero personal especializado en análisis de estados de cuenta y gestión de finanzas personales.
@@ -49,7 +51,7 @@ PRIORIDADES:
   },
 
   // Plantilla para análisis de período
-  analysisTemplate: (periodo: string, kpi: any, transactions: any[]) => {
+  analysisTemplate: (periodo: string, kpi: ContableKPISummary | null, transactions: ContableTransaction[]) => {
     return `Analiza los siguientes datos financieros del usuario para el período ${periodo}:
 
 KPIs FINANCIEROS:

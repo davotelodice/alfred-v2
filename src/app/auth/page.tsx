@@ -38,7 +38,7 @@ export default function AuthPage() {
     setSuccess('')
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password
       })
@@ -47,7 +47,8 @@ export default function AuthPage() {
 
       setSuccess('Inicio de sesión exitoso')
       router.push('/dashboard')
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as Error
       setError(error.message)
     } finally {
       setIsLoading(false)
@@ -87,7 +88,8 @@ export default function AuthPage() {
 
         setSuccess('Cuenta creada exitosamente. Revisa tu email para confirmar.')
       }
-    } catch (error: any) {
+    } catch (err) {
+      const error = err as Error
       setError(error.message)
     } finally {
       setIsLoading(false)

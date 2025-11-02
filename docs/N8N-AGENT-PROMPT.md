@@ -21,7 +21,7 @@ Analizar mensajes de Telegram del usuario y generar un JSON válido para crear t
 
 Para crear transacciones, DEBES usar la herramienta `HTTP_REQUEST2` con los siguientes parámetros:
 
-**URL:** http://localhost:3000/api/webhook/n8n (o tu dominio)
+**URL:** https://TU-PROYECTO.vercel.app/api/webhook/n8n (URL pública de Vercel después del despliegue)
 
 **Método:** POST
 
@@ -41,16 +41,40 @@ Para crear transacciones, DEBES usar la herramienta `HTTP_REQUEST2` con los sigu
 }
 ```
 
+**⚠️ IMPORTANTE - FORMATO DEL JSON:**
+El JSON debe ser un objeto directo, NO dentro de un array ni con una clave "JSON".
+- ✅ **CORRECTO:** `{"telefono":"+34612345678","tipo":"gasto","monto":50}`
+- ❌ **INCORRECTO:** `[{"JSON":{"telefono":"+34612345678","tipo":"gasto","monto":50}}]`
+- ❌ **INCORRECTO:** `{"JSON":{"telefono":"+34612345678","tipo":"gasto","monto":50}}`
+
+**Cuando llames a HTTP_REQUEST2, envía SOLO el objeto JSON directamente en el Body.**
+
 **PROCESO:**
 1. Analiza el mensaje del usuario
 2. Extrae: tipo, monto, descripción, fecha (si se menciona), método de pago (si se menciona)
 3. Si no hay fecha, usa la herramienta "Date & Time" para obtener la fecha actual
 4. Construye el JSON con todos los datos
 5. **LLAMA A LA HERRAMIENTA `HTTP_REQUEST2`** con:
-   - URL: http://localhost:3000/api/webhook/n8n
+   - URL: https://TU-PROYECTO.vercel.app/api/webhook/n8n
    - Método: POST
-   - Headers: Authorization: Bearer WEBHOOK_SECRET_TOKEN, Content-Type: application/json
-   - Body: El JSON generado
+   - Headers: Authorization: Bearer 2b240ebc4588827cc1652007b4f42750283b91063cbc644741370081fb7ae6da, Content-Type: application/json
+   - Body: El JSON generado DIRECTAMENTE (objeto JSON simple, sin array, sin clave "JSON")
+   
+**⚠️ CRÍTICO:** El Body debe ser el objeto JSON directamente:
+```json
+{
+  "telefono": "+34612345678",
+  "tipo": "gasto",
+  "monto": 50.00,
+  "descripcion": "supermercado",
+  "fecha": "2024-10-23"
+}
+```
+
+NO envíes:
+- ❌ `[{"JSON": {...}}]`
+- ❌ `{"JSON": {...}}`
+- ❌ Array con el objeto
 
 **Reglas:**
 - SIEMPRE debes llamar a `HTTP_REQUEST2` después de generar el JSON
@@ -322,9 +346,9 @@ Cuando recibas un mensaje del usuario:
    g. Asegurar que todos los campos obligatorios están presentes
    h. Validar que monto > 0 y tipo es válido
    i. **LLAMAR A LA HERRAMIENTA `HTTP_REQUEST2`** con:
-      - URL: http://localhost:3000/api/webhook/n8n
+      - URL: https://TU-PROYECTO.vercel.app/api/webhook/n8n
       - Method: POST
-      - Headers: Authorization: Bearer WEBHOOK_SECRET_TOKEN, Content-Type: application/json
+      - Headers: Authorization: Bearer 2b240ebc4588827cc1652007b4f42750283b91063cbc644741370081fb7ae6da, Content-Type: application/json
       - Body: El JSON generado
 4. **Retornar la respuesta del webhook al usuario**
 
@@ -353,7 +377,7 @@ Teléfono del chat: "+34612345678"
 1. Analiza: "Gasté 50 euros en supermercado hoy"
 2. Extrae: tipo="gasto", monto=50.00, descripcion="supermercado", fecha="hoy"
 3. Si fecha es "hoy", usa herramienta "Date & Time" para obtener: "2024-10-23"
-4. Genera JSON:
+4. Genera JSON (OBJETO DIRECTO, NO ARRAY):
 ```json
 {
   "telefono": "+34612345678",
@@ -363,13 +387,32 @@ Teléfono del chat: "+34612345678"
   "fecha": "2024-10-23"
 }
 ```
-5. **LLAMA A LA HERRAMIENTA `HTTP_REQUEST2`** con:
-   - URL: http://localhost:3000/api/webhook/n8n
-   - Method: POST
-   - Headers: { "Authorization": "Bearer WEBHOOK_SECRET_TOKEN", "Content-Type": "application/json" }
-   - Body: { "telefono": "+34612345678", "tipo": "gasto", "monto": 50.00, "descripcion": "supermercado", "fecha": "2024-10-23" }
 
-**IMPORTANTE:** DEBES llamar a la herramienta `HTTP_REQUEST2` para enviar la transacción al webhook.
+5. **LLAMA A LA HERRAMIENTA `HTTP_REQUEST2`** con:
+   - URL: https://TU-PROYECTO.vercel.app/api/webhook/n8n
+   - Method: POST
+   - Headers: 
+     - Authorization: Bearer 2b240ebc4588827cc1652007b4f42750283b91063cbc644741370081fb7ae6da
+     - Content-Type: application/json
+   - Body: **ENVÍA SOLO EL OBJETO JSON DIRECTAMENTE** (sin array, sin clave "JSON"):
+```json
+{
+  "telefono": "+34612345678",
+  "tipo": "gasto",
+  "monto": 50.00,
+  "descripcion": "supermercado",
+  "fecha": "2024-10-23"
+}
+```
+
+**⚠️ ERROR COMÚN - NO HACER ESTO:**
+❌ NO envíes: `[{"JSON": {"telefono": "...", "tipo": "gasto", ...}}]`
+❌ NO envíes: `{"JSON": {"telefono": "...", "tipo": "gasto", ...}}`
+❌ NO envíes un array
+
+✅ SÍ envía: `{"telefono": "...", "tipo": "gasto", "monto": 50.00, ...}` (objeto directo)
+
+**IMPORTANTE:** DEBES llamar a la herramienta `HTTP_REQUEST2` para enviar la transacción al webhook. El Body debe ser el objeto JSON directamente.
 
 ---
 
@@ -418,9 +461,12 @@ TU ÚNICA TAREA: Analizar el mensaje del usuario y llamar a la herramienta `HTTP
 
 IMPORTANTE: 
 - DEBES llamar a la herramienta `HTTP_REQUEST2` para enviar la transacción al webhook
-- URL: http://localhost:3000/api/webhook/n8n
+- URL: https://TU-PROYECTO.vercel.app/api/webhook/n8n (o http://localhost:3000 si es desarrollo local)
 - Method: POST
-- Headers: Authorization: Bearer WEBHOOK_SECRET_TOKEN, Content-Type: application/json
+- Headers: 
+  - Authorization: Bearer 2b240ebc4588827cc1652007b4f42750283b91063cbc644741370081fb7ae6da
+  - Content-Type: application/json
+- Body: **DEBE SER UN OBJETO JSON DIRECTO** (NO array, NO con clave "JSON")
 
 FORMATO JSON REQUERIDO:
 {
@@ -447,12 +493,16 @@ REGLAS:
 EJEMPLO:
 Usuario: "Gasté 50 euros en supermercado"
 1. Analiza el mensaje
-2. Genera JSON: {"telefono": "+34612345678", "tipo": "gasto", "monto": 50.00, "descripcion": "supermercado", "fecha": "2024-10-23"}
+2. Genera JSON (OBJETO DIRECTO): {"telefono": "+34612345678", "tipo": "gasto", "monto": 50.00, "descripcion": "supermercado", "fecha": "2024-10-23"}
 3. **LLAMA A HTTP_REQUEST2** con:
-   - URL: http://localhost:3000/api/webhook/n8n
+   - URL: https://TU-PROYECTO.vercel.app/api/webhook/n8n (o https://TU-PROYECTO.vercel.app/api/webhook/n8n si es desarrollo local)
    - Method: POST
-   - Headers: {"Authorization": "Bearer WEBHOOK_SECRET_TOKEN", "Content-Type": "application/json"}
+   - Headers: 
+     - Authorization: Bearer 2b240ebc4588827cc1652007b4f42750283b91063cbc644741370081fb7ae6da
+     - Content-Type: application/json
    - Body: {"telefono": "+34612345678", "tipo": "gasto", "monto": 50.00, "descripcion": "supermercado", "fecha": "2024-10-23"}
+   
+   ⚠️ El Body es el objeto JSON DIRECTAMENTE, NO: [{"JSON": {...}}] ni {"JSON": {...}}
 ```
 
 ---
@@ -476,11 +526,11 @@ Usuario: "Gasté 50 euros en supermercado"
 **Node:** HTTP Request
 
 **Method:** POST  
-**URL:** `http://localhost:3000/api/webhook/n8n` (o tu dominio)
+**URL:** `https://TU-PROYECTO.vercel.app/api/webhook/n8n` (o tu dominio)
 
 **Headers:**
 ```
-Authorization: Bearer WEBHOOK_SECRET_TOKEN
+Authorization: Bearer 2b240ebc4588827cc1652007b4f42750283b91063cbc644741370081fb7ae6da
 Content-Type: application/json
 ```
 

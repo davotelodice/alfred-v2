@@ -180,7 +180,12 @@ export async function generateAdviceWithAI(
     console.log('[AI Service] Consejos generados:', advices.length)
 
     // Convertir a formato ContableAdvice
-    const adviceList: ContableAdvice[] = advices.map((advice: any) => ({
+    interface AdviceResponse {
+      tipo_alerta?: string
+      mensaje: string
+      prioridad?: string
+    }
+    const adviceList: ContableAdvice[] = advices.map((advice: AdviceResponse) => ({
       id: '', // Se generará en la BD
       user_id: userId,
       tipo_alerta: advice.tipo_alerta || 'general',

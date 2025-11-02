@@ -9,7 +9,7 @@ interface AuthContextType {
   user: User | null
   loading: boolean
   signOut: () => Promise<void>
-  getSession: () => Promise<any>
+  getSession: () => Promise<{ access_token: string; refresh_token: string } | null>
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -59,7 +59,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const getSession = async () => {
     const { data: { session } } = await supabase.auth.getSession()
-    return session
+    if (!session) return null
+    return {
+      access_token: session.access_token,
+      refresh_token: session.refresh_token
+    }
   }
 
   return (
