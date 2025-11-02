@@ -27,19 +27,29 @@ export default function ProfilePage() {
   })
 
   useEffect(() => {
-    // Esperar a que la autenticación termine de cargar antes de verificar
+    // Esperar a que la autenticación termine de cargar completamente
     if (authLoading) {
       return
     }
 
-    // Solo redirigir si realmente no hay usuario después de que termine la carga
-    if (!user) {
-      router.push('/auth')
-      return
+    // Solo redirigir si realmente no hay usuario DESPUÉS de que termine la carga
+    // No redirigir si el usuario es null temporalmente durante un refresh de token
+    if (!user && !authLoading) {
+      // Agregar un pequeño delay para asegurarnos de que no es un cambio temporal
+      const timeoutId = setTimeout(() => {
+        // Verificar de nuevo después del delay - usar getSession para verificar sesión real
+        getSession().then((session) => {
+          if (!session && !authLoading) {
+            router.push('/auth')
+          }
+        })
+      }, 1000) // 1 segundo de delay
+
+      return () => clearTimeout(timeoutId)
     }
     
-    // Cargar perfil solo si hay usuario
-    if (user) {
+    // Cargar perfil solo si hay usuario y no está cargando
+    if (user && !authLoading) {
       loadProfile()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
