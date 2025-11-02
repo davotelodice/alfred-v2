@@ -14,7 +14,9 @@ import {
   BarChart3,
   Lightbulb,
   LogOut,
-  User
+  User,
+  Edit,
+  X
 } from 'lucide-react'
 import { 
   getUserTransactions, 
@@ -39,11 +41,18 @@ export default function DashboardPage() {
   const [showTransactionForm, setShowTransactionForm] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isGeneratingAdvice, setIsGeneratingAdvice] = useState(false)
+  const [editingTransaction, setEditingTransaction] = useState<ContableTransaction | null>(null)
   const [transactionForm, setTransactionForm] = useState({
     tipo: 'gasto' as 'ingreso' | 'gasto' | 'inversion' | 'ahorro' | 'transferencia',
     monto: '',
     descripcion: '',
     fecha: new Date().toISOString().split('T')[0]
+  })
+  const [editForm, setEditForm] = useState({
+    tipo: 'gasto' as 'ingreso' | 'gasto' | 'inversion' | 'ahorro' | 'transferencia',
+    monto: '',
+    descripcion: '',
+    fecha: ''
   })
 
   // Debug: Log del estado del formulario
@@ -75,10 +84,11 @@ export default function DashboardPage() {
   const loadTransactions = async () => {
     try {
       const data = await getUserTransactions({ 
-        period: selectedPeriod,
+        periodo: selectedPeriod, // Corregido: period -> periodo
         limit: 50 
       })
       setTransactions(data || [])
+      console.log(`[Dashboard] Cargadas ${data?.length || 0} transacciones para período ${selectedPeriod}`)
     } catch (error) {
       console.error('Error al cargar transacciones:', error)
     }
@@ -170,6 +180,82 @@ export default function DashboardPage() {
       await loadAdvice() // Recargar recomendaciones
     } catch (error) {
       console.error('Error al marcar recomendación como leída:', error)
+    }
+  }
+
+  const handleEditTransaction = (transaction: ContableTransaction) => {
+    setEditingTransaction(transaction)
+    setEditForm({
+      tipo: transaction.tipo,
+      monto: transaction.monto.toString(),
+      descripcion: transaction.descripcion || '',
+      fecha: transaction.fecha
+    })
+  }
+
+  const handleCancelEdit = () => {
+    setEditingTransaction(null)
+    setEditForm({
+      tipo: 'gasto',
+      monto: '',
+      descripcion: '',
+      fecha: ''
+    })
+  }
+
+  const handleUpdateTransaction = async () => {
+    try {
+      if (!editingTransaction) return
+      if (!user) {
+        alert('Usuario no autenticado')
+        return
+      }
+
+      if (!editForm.monto || !editForm.descripcion) {
+        alert('Por favor completa todos los campos obligatorios')
+        return
+      }
+
+      // Obtener token de sesión
+      const session = await getSession()
+      if (!session?.access_token) {
+        throw new Error('No hay sesión activa')
+      }
+
+      // Llamar al API para actualizar
+      const response = await fetch(`/api/transactions/${editingTransaction.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          tipo: editForm.tipo,
+          monto: parseFloat(editForm.monto),
+          descripcion: editForm.descripcion,
+          fecha: editForm.fecha
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Error al actualizar transacción')
+      }
+
+      await loadTransactions()
+      await loadKPIs()
+      setEditingTransaction(null)
+      setEditForm({
+        tipo: 'gasto',
+        monto: '',
+        descripcion: '',
+        fecha: ''
+      })
+
+      alert('¡Transacción actualizada exitosamente!')
+    } catch (error: any) {
+      console.error('Error al actualizar transacción:', error)
+      alert(`Error al actualizar la transacción: ${error.message || 'Error desconocido'}`)
     }
   }
 
@@ -407,18 +493,97 @@ export default function DashboardPage() {
                 <div className="space-y-3">
                   {transactions.slice(0, 10).map((transaction) => (
                     <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{transaction.descripcion || 'Sin descripción'}</p>
-                        <p className="text-sm text-gray-500">{transaction.fecha}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className={`font-bold ${transaction.tipo === 'ingreso' ? 'text-green-600' : 'text-red-600'}`}>
-                          {transaction.tipo === 'ingreso' ? '+' : '-'}€{transaction.monto.toFixed(2)}
-                        </p>
-                        <Badge variant="outline" className="text-xs">
-                          {transaction.tipo}
-                        </Badge>
-                      </div>
+                      {editingTransaction?.id === transaction.id ? (
+                        // Formulario de edición
+                        <div className="w-full space-y-2">
+                          <div>
+                            <label className="block text-xs font-medium mb-1">Tipo</label>
+                            <select
+                              className="w-full p-1 border rounded text-sm"
+                              value={editForm.tipo}
+                              onChange={(e) => setEditForm({ ...editForm, tipo: e.target.value as any })}
+                            >
+                              <option value="ingreso">Ingreso</option>
+                              <option value="gasto">Gasto</option>
+                              <option value="ahorro">Ahorro</option>
+                              <option value="inversion">Inversión</option>
+                              <option value="transferencia">Transferencia</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium mb-1">Monto *</label>
+                            <input
+                              type="text"
+                              className="w-full p-1 border rounded text-sm"
+                              placeholder="0.00"
+                              value={editForm.monto}
+                              onChange={(e) => setEditForm({ ...editForm, monto: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium mb-1">Descripción *</label>
+                            <input
+                              type="text"
+                              className="w-full p-1 border rounded text-sm"
+                              placeholder="Descripción"
+                              value={editForm.descripcion}
+                              onChange={(e) => setEditForm({ ...editForm, descripcion: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium mb-1">Fecha</label>
+                            <input
+                              type="date"
+                              className="w-full p-1 border rounded text-sm"
+                              value={editForm.fecha}
+                              onChange={(e) => setEditForm({ ...editForm, fecha: e.target.value })}
+                            />
+                          </div>
+                          <div className="flex gap-2 pt-2">
+                            <Button
+                              onClick={handleUpdateTransaction}
+                              size="sm"
+                              className="flex-1"
+                            >
+                              Guardar
+                            </Button>
+                            <Button
+                              onClick={handleCancelEdit}
+                              variant="outline"
+                              size="sm"
+                              className="flex-1"
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        // Vista normal
+                        <>
+                          <div className="flex-1">
+                            <p className="font-medium">{transaction.descripcion || 'Sin descripción'}</p>
+                            <p className="text-sm text-gray-500">{transaction.fecha}</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <p className={`font-bold ${transaction.tipo === 'ingreso' ? 'text-green-600' : 'text-red-600'}`}>
+                                {transaction.tipo === 'ingreso' ? '+' : '-'}€{transaction.monto.toFixed(2)}
+                              </p>
+                              <Badge variant="outline" className="text-xs">
+                                {transaction.tipo}
+                              </Badge>
+                            </div>
+                            <Button
+                              onClick={() => handleEditTransaction(transaction)}
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>

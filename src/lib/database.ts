@@ -26,8 +26,16 @@ export async function getUserTransactions(filters: TransactionFilters = {}) {
 
   if (filters.periodo) {
     const [year, month] = filters.periodo.split('-')
-    const startDate = `${year}-${month}-01`
-    const endDate = `${year}-${month}-31`
+    const yearNum = parseInt(year)
+    const monthNum = parseInt(month)
+    
+    // Primer día del mes
+    const startDate = `${year}-${month.padStart(2, '0')}-01`
+    
+    // Último día del mes (calcular correctamente)
+    const ultimoDia = new Date(yearNum, monthNum, 0).getDate()
+    const endDate = `${year}-${month.padStart(2, '0')}-${ultimoDia.toString().padStart(2, '0')}`
+    
     query = query.gte('fecha', startDate).lte('fecha', endDate)
   }
 
