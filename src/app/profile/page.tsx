@@ -12,7 +12,7 @@ import { useAuth } from '@/components/AuthProvider'
 import { User, Mail, Phone, MessageSquare, ExternalLink, AlertCircle, CheckCircle } from 'lucide-react'
 
 export default function ProfilePage() {
-  const { user, getSession } = useAuth()
+  const { user, loading: authLoading, getSession } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -27,13 +27,23 @@ export default function ProfilePage() {
   })
 
   useEffect(() => {
+    // Esperar a que la autenticación termine de cargar antes de verificar
+    if (authLoading) {
+      return
+    }
+
+    // Solo redirigir si realmente no hay usuario después de que termine la carga
     if (!user) {
       router.push('/auth')
       return
     }
-    loadProfile()
+    
+    // Cargar perfil solo si hay usuario
+    if (user) {
+      loadProfile()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, router])
+  }, [user, authLoading, router])
 
   const loadProfile = async () => {
     try {
@@ -161,7 +171,8 @@ export default function ProfilePage() {
     window.open('https://t.me/id_chat_alfred_bot', '_blank')
   }
 
-  if (loading) {
+  // Mostrar loading mientras se carga la autenticación o el perfil
+  if (authLoading || loading) {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center min-h-[400px]">

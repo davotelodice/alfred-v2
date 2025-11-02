@@ -23,6 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
     // Obtener sesión inicial
@@ -31,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Sesión inicial:', session)
       setUser(session?.user ?? null)
       setLoading(false)
+      setIsInitialized(true)
     }
 
     getInitialSession()
@@ -42,16 +44,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null)
         setLoading(false)
 
-        if (event === 'SIGNED_IN') {
-          router.push('/dashboard')
-        } else if (event === 'SIGNED_OUT') {
-          router.push('/auth')
+        // Solo redirigir si es un evento real de inicio/cierre de sesión
+        // No redirigir en refrescos de token o cambios de sesión cuando ya estamos inicializados
+        if (!isInitialized) {
+          // Solo redirigir en la inicialización si el usuario está autenticado
+          if (event === 'SIGNED_IN' && session?.user) {
+            const currentPath = window.location.pathname
+            // Solo redirigir si estamos en la página de auth
+            if (currentPath === '/auth' || currentPath === '/') {
+              router.push('/dashboard')
+            }
+          }
+        } else {
+          // Después de la inicialización, solo redirigir en eventos explícitos
+          if (event === 'SIGNED_OUT') {
+            router.push('/auth')
+          }
+          // No redirigir en SIGNED_IN después de la inicialización para evitar interrupciones
         }
       }
     )
 
     return () => subscription.unsubscribe()
-  }, [router])
+  }, [router, isInitialized])
 
   const signOut = async () => {
     await supabase.auth.signOut()
