@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { supabase } from '@/lib/supabaseClient'
 import { useAuth } from '@/components/AuthProvider'
 import { User, Mail, Phone, MessageSquare, ExternalLink, AlertCircle, CheckCircle } from 'lucide-react'
 
@@ -49,27 +48,50 @@ export default function ProfilePage() {
         throw new Error('No hay sesión activa')
       }
 
-      // Obtener perfil del usuario desde contable_users
-      const { data: profile, error: profileError } = await supabase
-        .from('contable_users')
-        .select('*')
-        .eq('id', user.id)
-        .single()
+      // Usar API route que maneja RLS correctamente
+      const response = await fetch('/api/profile', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      })
 
-      if (profileError) throw profileError
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Error al cargar el perfil')
+      }
 
-      if (profile) {
+      const result = await response.json()
+      
+      if (result.success && result.data) {
         setProfileData({
-          nombre: profile.nombre || '',
-          email: profile.email || user.email || '',
-          telefono: profile.telefono || '',
-          telegram_chat_id: profile.telegram_chat_id || ''
+          nombre: result.data.nombre || '',
+          email: result.data.email || user.email || '',
+          telefono: result.data.telefono || '',
+          telegram_chat_id: result.data.telegram_chat_id || ''
+        })
+      } else {
+        // Si aún no hay perfil, usar datos del usuario autenticado
+        setProfileData({
+          nombre: user.email?.split('@')[0] || '',
+          email: user.email || '',
+          telefono: '',
+          telegram_chat_id: ''
         })
       }
     } catch (err) {
       const error = err as Error
       setError(error.message || 'Error al cargar el perfil')
       console.error('Error al cargar perfil:', error)
+      
+      // Aún así, intentar cargar datos básicos del usuario autenticado
+      if (user) {
+        setProfileData({
+          nombre: user.email?.split('@')[0] || '',
+          email: user.email || '',
+          telefono: '',
+          telegram_chat_id: ''
+        })
+      }
     } finally {
       setLoading(false)
     }
@@ -95,23 +117,36 @@ export default function ProfilePage() {
         throw new Error('El ID de Chat de Telegram es requerido para vincular tu cuenta')
       }
 
-      // Actualizar perfil
-      const { error: updateError } = await supabase
-        .from('contable_users')
-        .update({
+      // Usar API route que maneja RLS correctamente
+      const response = await fetch('/api/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
           nombre: profileData.nombre,
           email: profileData.email,
           telefono: profileData.telefono,
           telegram_chat_id: profileData.telegram_chat_id.trim()
         })
-        .eq('id', user.id)
+      })
 
-      if (updateError) throw updateError
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Error al guardar el perfil')
+      }
 
-      setSuccess('¡Perfil actualizado exitosamente!')
+      const result = await response.json()
       
-      // Recargar perfil
-      await loadProfile()
+      if (result.success) {
+        setSuccess('¡Perfil actualizado exitosamente!')
+        
+        // Recargar perfil
+        await loadProfile()
+      } else {
+        throw new Error(result.error || 'Error al guardar el perfil')
+      }
     } catch (err) {
       const error = err as Error
       setError(error.message || 'Error al guardar el perfil')
