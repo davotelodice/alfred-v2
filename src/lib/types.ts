@@ -132,14 +132,22 @@ export interface CreateAdviceRequest {
 // =====================================================
 
 export interface N8nWebhookData {
-  chat_id?: string
-  telefono?: string
+  chat_id: string // REQUERIDO - No opcional
+  telefono?: string // Opcional - Solo si se necesita
   tipo: 'ingreso' | 'gasto' | 'inversion' | 'ahorro'
   monto: number
-  descripcion?: string
+  descripcion: string // REQUERIDO
   categoria?: string
-  fecha?: string
+  fecha: string // REQUERIDO
   metodo_pago?: string
+}
+
+export interface N8nQueryRequest {
+  chat_id: string // REQUERIDO para identificar al usuario
+  fecha_desde?: string // OPCIONAL: YYYY-MM-DD
+  fecha_hasta?: string // OPCIONAL: YYYY-MM-DD
+  tipo?: 'ingreso' | 'gasto' | 'inversion' | 'ahorro' // OPCIONAL: filtrar por tipo
+  categoria?: string // OPCIONAL: filtrar por categoría
 }
 
 // =====================================================

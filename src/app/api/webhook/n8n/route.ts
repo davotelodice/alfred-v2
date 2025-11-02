@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { 
-  findUserByPhoneServer,
   findUserByChatIdServer,
-  createUserIfNotExistsServer, 
   createTransactionServer, 
   logAuditActionServer,
   supabaseServer
 } from '@/lib/database-server'
-import type { ApiResponse, N8nWebhookData, ContableUser } from '@/lib/types'
+import type { ApiResponse, N8nWebhookData } from '@/lib/types'
 
 // POST /api/webhook/n8n - Webhook para n8n
 export async function POST(request: NextRequest) {
@@ -35,11 +33,29 @@ export async function POST(request: NextRequest) {
     // Parsear datos del webhook
     const webhookData: N8nWebhookData = await request.json()
 
-    // Validar datos requeridos (chat_id O telefono)
-    if (!webhookData.chat_id && !webhookData.telefono) {
+    // Validar datos requeridos: chat_id ES OBLIGATORIO
+    if (!webhookData.chat_id) {
       const response: ApiResponse = {
         success: false,
-        error: 'chat_id o telefono es requerido'
+        error: 'chat_id es requerido'
+      }
+      return NextResponse.json(response, { status: 400 })
+    }
+
+    // Validar descripcion
+    if (!webhookData.descripcion || webhookData.descripcion.trim() === '') {
+      const response: ApiResponse = {
+        success: false,
+        error: 'descripcion es requerida'
+      }
+      return NextResponse.json(response, { status: 400 })
+    }
+
+    // Validar fecha
+    if (!webhookData.fecha) {
+      const response: ApiResponse = {
+        success: false,
+        error: 'fecha es requerida (formato: YYYY-MM-DD)'
       }
       return NextResponse.json(response, { status: 400 })
     }
@@ -60,81 +76,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(response, { status: 400 })
     }
 
-    // Buscar usuario: PRIMERO por chat_id (preferido), luego por teléfono
-    let user: ContableUser | null = null
+    // Buscar usuario POR CHAT_ID (obligatorio)
+    const user = await findUserByChatIdServer(webhookData.chat_id)
 
-    if (webhookData.chat_id) {
-      // Prioridad 1: Buscar por telegram_chat_id
-      user = await findUserByChatIdServer(webhookData.chat_id)
-      
-      if (!user && webhookData.telefono) {
-        // Si no existe pero hay teléfono, buscar por teléfono
-        const normalizedPhone = webhookData.telefono.replace(/[\s\-\(\)]/g, '')
-        user = await findUserByPhoneServer(normalizedPhone)
-        
-        // Si encontramos por teléfono, actualizar con chat_id
-        if (user) {
-          const { error: updateError } = await supabaseServer
-            .from('contable_users')
-            .update({ telegram_chat_id: webhookData.chat_id })
-            .eq('id', user.id)
-          
-          if (!updateError) {
-            user.telegram_chat_id = webhookData.chat_id
-          }
-        }
-      }
-    } else if (webhookData.telefono) {
-      // Si no hay chat_id, buscar solo por teléfono
-      const normalizedPhone = webhookData.telefono.replace(/[\s\-\(\)]/g, '')
-      user = await findUserByPhoneServer(normalizedPhone)
-    }
-
-    // Si no existe el usuario, crearlo
+    // Si NO existe el usuario, devolver error - NO crear usuario automáticamente
     if (!user) {
-      const userData: { nombre: string; telefono?: string; telegram_chat_id?: string } = {
-        nombre: webhookData.chat_id 
-          ? `Usuario Telegram ${webhookData.chat_id}` 
-          : (webhookData.telefono ? `Usuario ${webhookData.telefono.replace(/[\s\-\(\)]/g, '')}` : 'Usuario Telegram'),
+      const response: ApiResponse = {
+        success: false,
+        error: `Usuario no registrado. El chat_id ${webhookData.chat_id} no está vinculado a ninguna cuenta. Por favor, registra tu cuenta en el dashboard y vincula tu Telegram Chat ID.`
       }
-      
-      if (webhookData.telefono) {
-        userData.telefono = webhookData.telefono.replace(/[\s\-\(\)]/g, '')
-      }
-      
-      if (webhookData.chat_id) {
-        userData.telegram_chat_id = webhookData.chat_id
-      }
-
-      user = await createUserIfNotExistsServer(userData)
-
-      if (!user) {
-        const response: ApiResponse = {
-          success: false,
-          error: 'No se pudo crear el usuario'
-        }
-        return NextResponse.json(response, { status: 500 })
-      }
-
-      // Registrar creación de usuario
-      await logAuditActionServer(
-        'user_created_via_webhook',
-        { 
-          chat_id: webhookData.chat_id,
-          telefono: webhookData.telefono,
-          origen: 'n8n' 
-        },
-        user.id
-      )
+      return NextResponse.json(response, { status: 404 })
     }
 
-    // Preparar datos de la transacción
+    // Si existe el usuario y se proporcionó teléfono, actualizar teléfono si es diferente
+    if (webhookData.telefono && user.telefono !== webhookData.telefono) {
+      const normalizedPhone = webhookData.telefono.replace(/[\s\-\(\)]/g, '')
+      await supabaseServer
+        .from('contable_users')
+        .update({ telefono: normalizedPhone })
+        .eq('id', user.id)
+    }
+
+    // Preparar datos de la transacción (ahora fecha y descripcion son obligatorios)
     const transactionData = {
       user_id: user.id,
       tipo: webhookData.tipo,
       monto: webhookData.monto,
-      descripcion: webhookData.descripcion || `Transacción ${webhookData.tipo} desde Telegram`,
-      fecha: webhookData.fecha || new Date().toISOString().split('T')[0],
+      descripcion: webhookData.descripcion, // Ya validado arriba
+      fecha: webhookData.fecha, // Ya validado arriba
       metodo_pago: webhookData.metodo_pago || 'telegram',
       origen: 'n8n'
     }

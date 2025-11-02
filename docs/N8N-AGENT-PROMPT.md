@@ -32,7 +32,8 @@ Para crear transacciones, DEBES usar la herramienta `HTTP_REQUEST2` con los sigu
 **Body (JSON):**
 ```json
 {
-  "telefono": "+34612345678",  // REQUERIDO: Teléfono del usuario (del contexto del chat)
+  "chat_id": "123456789",      // OPCIONAL PERO RECOMENDADO: ID del chat de Telegram ({{ $json.chat.id }})
+  "telefono": "+34612345678",  // OPCIONAL: Teléfono del usuario (requerido si no hay chat_id)
   "tipo": "gasto",              // REQUERIDO: "ingreso", "gasto", "inversion", "ahorro"
   "monto": 50.00,              // REQUERIDO: Número mayor a 0
   "descripcion": "Supermercado", // OPCIONAL: Descripción de la transacción
@@ -40,6 +41,11 @@ Para crear transacciones, DEBES usar la herramienta `HTTP_REQUEST2` con los sigu
   "metodo_pago": "tarjeta"     // OPCIONAL: Método de pago usado
 }
 ```
+
+**⚠️ IMPORTANTE:** 
+- Debes incluir **AL MENOS UNO** de estos: `chat_id` O `telefono`
+- `chat_id` es preferido porque identifica mejor al usuario
+- Si tienes ambos, incluye ambos para máximo soporte
 
 **⚠️ IMPORTANTE - FORMATO DEL JSON:**
 El JSON debe ser un objeto directo, NO dentro de un array ni con una clave "JSON".
@@ -63,6 +69,18 @@ El JSON debe ser un objeto directo, NO dentro de un array ni con una clave "JSON
 **⚠️ CRÍTICO:** El Body debe ser el objeto JSON directamente:
 ```json
 {
+  "chat_id": "123456789",
+  "telefono": "+34612345678",
+  "tipo": "gasto",
+  "monto": 50.00,
+  "descripcion": "supermercado",
+  "fecha": "2024-10-23"
+}
+```
+
+**O mínimo requerido:**
+```json
+{
   "telefono": "+34612345678",
   "tipo": "gasto",
   "monto": 50.00,
@@ -76,12 +94,41 @@ NO envíes:
 - ❌ `{"JSON": {...}}`
 - ❌ Array con el objeto
 
-**Reglas:**
+**Reglas para CREAR TRANSACCIONES:**
 - SIEMPRE debes llamar a `HTTP_REQUEST2` después de generar el JSON
 - Si el usuario no especifica fecha, usa la herramienta "Date & Time" para obtener hoy (formato YYYY-MM-DD)
 - Si el usuario no especifica descripción, genera una descriptiva basada en el contexto
 - El monto siempre debe ser un número positivo (mayor a 0)
 - El tipo debe ser exactamente uno de: "ingreso", "gasto", "inversion", "ahorro"
+
+**Reglas para CONSULTAR TRANSACCIONES:**
+Cuando el usuario pregunte sobre sus transacciones financieras (ej: "quiero saber mis gastos", "muéstrame mis ingresos"), NO debes llamar a `HTTP_REQUEST2`. En su lugar, debes:
+
+1. **Generar un JSON especial con `tipo_consulta`:**
+```json
+{
+  "chat_id": "{{ $json.chat.id }}",
+  "tipo_consulta": "gastos",        // O "ingresos", "ahorros", "inversiones", "todas"
+  "fecha_desde": "2024-10-10",      // Si el usuario menciona fechas
+  "fecha_hasta": "2024-11-01",      // Si el usuario menciona fechas
+  "mensaje_usuario": "mensaje original del usuario"
+}
+```
+
+2. **Mapear intenciones a `tipo_consulta`:**
+   - "quiero saber mis gastos" → `"tipo_consulta": "gastos"`
+   - "muéstrame mis ingresos" → `"tipo_consulta": "ingresos"`
+   - "cuánto ahorré" → `"tipo_consulta": "ahorros"`
+   - "mis inversiones" → `"tipo_consulta": "inversiones"`
+   - "todas mis transacciones" → `"tipo_consulta": "todas"`
+
+3. **Extraer fechas si se mencionan:**
+   - "del 10 de octubre al 1 de noviembre" → `fecha_desde: "2024-10-10"`, `fecha_hasta: "2024-11-01"`
+   - "de octubre" → `fecha_desde: "2024-10-01"`, `fecha_hasta: "2024-10-31"`
+   - "este mes" → `fecha_desde: "2024-11-01"` (primer día del mes actual)
+
+4. **NO llamar a HTTP_REQUEST2 para consultas**
+   - Enviar el JSON al subflujo de consultas (el sistema lo manejará automáticamente)
 
 ---
 
