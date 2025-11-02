@@ -38,6 +38,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [showTransactionForm, setShowTransactionForm] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isGeneratingAdvice, setIsGeneratingAdvice] = useState(false)
   const [transactionForm, setTransactionForm] = useState({
     tipo: 'gasto' as 'ingreso' | 'gasto' | 'inversion' | 'ahorro' | 'transferencia',
     monto: '',
@@ -169,6 +170,58 @@ export default function DashboardPage() {
       await loadAdvice() // Recargar recomendaciones
     } catch (error) {
       console.error('Error al marcar recomendación como leída:', error)
+    }
+  }
+
+  const handleGenerateAdvice = async () => {
+    try {
+      setIsGeneratingAdvice(true)
+
+      if (!user) {
+        alert('Usuario no autenticado')
+        return
+      }
+
+      // Obtener token de sesión
+      const session = await getSession()
+      if (!session?.access_token) {
+        throw new Error('No hay sesión activa')
+      }
+
+      // Llamar al endpoint para generar consejos
+      console.log('[Dashboard] Generando consejos para período:', selectedPeriod)
+      console.log('[Dashboard] Usuario:', user.id)
+      
+      const response = await fetch('/api/advice/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          periodo: selectedPeriod
+        })
+      })
+      
+      console.log('[Dashboard] Respuesta recibida:', response.status)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Error al generar consejos')
+      }
+
+      const data = await response.json()
+      console.log('Consejos generados:', data)
+
+      // Recargar consejos
+      await loadAdvice()
+
+      alert(`¡Se generaron ${data.data?.saved || 0} consejos financieros!`)
+    } catch (error: any) {
+      console.error('Error al generar consejos:', error)
+      alert(`Error al generar consejos: ${error.message || 'Error desconocido'}`)
+    } finally {
+      setIsGeneratingAdvice(false)
     }
   }
 
@@ -376,12 +429,33 @@ export default function DashboardPage() {
 
         {/* Panel de Recomendaciones */}
         <section>
-          <div className="flex items-center gap-2 mb-4">
-            <Lightbulb className="h-5 w-5 text-yellow-500" />
-            <h2 className="text-xl font-semibold">Recomendaciones</h2>
-            {unreadAdviceCount > 0 && (
-              <Badge variant="destructive">{unreadAdviceCount}</Badge>
-            )}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Lightbulb className="h-5 w-5 text-yellow-500" />
+              <h2 className="text-xl font-semibold">Recomendaciones</h2>
+              {unreadAdviceCount > 0 && (
+                <Badge variant="destructive">{unreadAdviceCount}</Badge>
+              )}
+            </div>
+            <Button
+              onClick={handleGenerateAdvice}
+              disabled={isGeneratingAdvice}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              {isGeneratingAdvice ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <Lightbulb className="h-4 w-4" />
+                  Solicitar Consejos IA
+                </>
+              )}
+            </Button>
           </div>
           <Card>
             <CardContent className="p-6">

@@ -56,3 +56,6 @@ export async function logAuditActionServer(accion: string, detalles: Record<stri
   if (error) throw error
   return data
 }
+
+
+
