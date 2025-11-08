@@ -456,15 +456,21 @@ export default function AsientosPage() {
                 <ResponsiveContainer width="100%" height={300}>
                   <RechartsPieChart>
                     <Pie
-                      data={distribucionGastos}
+                      data={distribucionGastos.map(item => ({
+                        name: item.nombre_categoria,
+                        value: item.total_monto
+                      }))}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ nombre_categoria, percent }) => `${nombre_categoria}: ${(percent * 100).toFixed(0)}%`}
+                      label={(entry: { name?: string; percent?: number; [key: string]: unknown }) => {
+                        const percent = entry.percent || 0
+                        const name = entry.name || ''
+                        return `${name}: ${(percent * 100).toFixed(0)}%`
+                      }}
                       outerRadius={80}
                       fill="#8884d8"
-                      dataKey="total_monto"
-                      nameKey="nombre_categoria"
+                      dataKey="value"
                     >
                       {distribucionGastos.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
