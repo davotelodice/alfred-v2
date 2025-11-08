@@ -16,7 +16,8 @@ import {
   Lightbulb,
   LogOut,
   User,
-  Edit
+  Edit,
+  FileText
 } from 'lucide-react'
 import { 
   getUserTransactions, 
@@ -384,6 +385,15 @@ export default function DashboardPage() {
           >
             <Plus className="h-4 w-4" />
             Nueva Transacción
+          </Button>
+
+          <Button 
+            onClick={() => router.push('/asientos')}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            Asientos Contables
           </Button>
 
           <Button 

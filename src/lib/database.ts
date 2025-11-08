@@ -6,7 +6,12 @@ import type {
   ContableCategory,
   CreateTransactionRequest,
   CreateAdviceRequest,
-  TransactionFilters
+  TransactionFilters,
+  ContableAsiento,
+  ContableCategoriaAsiento,
+  CreateAsientoRequest,
+  UpdateAsientoRequest,
+  AsientoFilters
 } from './types'
 
 // =====================================================
@@ -197,4 +202,105 @@ export async function getAvailablePeriods(): Promise<string[]> {
   periods.add(getCurrentPeriod())
 
   return Array.from(periods).sort().reverse()
+}
+
+// =====================================================
+// FUNCIONES PARA ASIENTOS CONTABLES
+// =====================================================
+
+export async function getUserAsientos(filters: AsientoFilters = {}) {
+  let query = supabase
+    .from('contable_asientos')
+    .select('*')
+    .order('fecha', { ascending: false })
+
+  if (filters.fecha_desde) {
+    query = query.gte('fecha', filters.fecha_desde)
+  }
+
+  if (filters.fecha_hasta) {
+    query = query.lte('fecha', filters.fecha_hasta)
+  }
+
+  if (filters.categoria_contable) {
+    query = query.eq('categoria_contable', filters.categoria_contable)
+  }
+
+  if (filters.tipo_movimiento) {
+    query = query.eq('tipo_movimiento', filters.tipo_movimiento)
+  }
+
+  if (filters.cuenta_origen) {
+    query = query.eq('cuenta_origen', filters.cuenta_origen)
+  }
+
+  if (filters.limit) {
+    query = query.limit(filters.limit)
+  }
+
+  if (filters.offset) {
+    query = query.range(filters.offset, filters.offset + (filters.limit || 10) - 1)
+  }
+
+  const { data, error } = await query
+
+  if (error) throw error
+  return data as ContableAsiento[]
+}
+
+export async function getCategoriasAsientos(tipoMovimiento?: 'ingreso' | 'gasto' | 'otro') {
+  let query = supabase
+    .from('contable_categorias_asientos')
+    .select('*')
+    .eq('activo', true)
+    .order('codigo', { ascending: true })
+
+  if (tipoMovimiento) {
+    query = query.eq('tipo_movimiento', tipoMovimiento)
+  }
+
+  const { data, error } = await query
+
+  if (error) throw error
+  return data as ContableCategoriaAsiento[]
+}
+
+export async function createAsiento(asientoData: Omit<CreateAsientoRequest, 'user_id'>) {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) throw new Error('Usuario no autenticado')
+
+  const fullData: CreateAsientoRequest = {
+    ...asientoData,
+    user_id: session.user.id
+  }
+
+  const { data, error } = await supabase
+    .from('contable_asientos')
+    .insert(fullData)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data as ContableAsiento
+}
+
+export async function updateAsiento(id: string, updates: UpdateAsientoRequest) {
+  const { data, error } = await supabase
+    .from('contable_asientos')
+    .update(updates)
+    .eq('id_asiento', id)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data as ContableAsiento
+}
+
+export async function deleteAsiento(id: string) {
+  const { error } = await supabase
+    .from('contable_asientos')
+    .delete()
+    .eq('id_asiento', id)
+
+  if (error) throw error
 }
