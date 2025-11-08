@@ -97,19 +97,23 @@ export default function AsientosPage() {
   const loadData = useCallback(async () => {
     try {
       setIsLoading(true)
+      // Normalizar filtros: convertir strings vacíos a undefined
+      const normalizedFilters = {
+        tipo_movimiento: filters.tipo_movimiento || undefined,
+        categoria_contable: filters.categoria_contable || undefined,
+        fecha_desde: filters.fecha_desde || undefined,
+        fecha_hasta: filters.fecha_hasta || undefined,
+      }
+      
       const [asientosData, categoriasData, statsData, categoriaData, mesData] = await Promise.all([
         getUserAsientos({
-          ...filters,
-          tipo_movimiento: filters.tipo_movimiento || undefined,
-          categoria_contable: filters.categoria_contable || undefined,
-          fecha_desde: filters.fecha_desde || undefined,
-          fecha_hasta: filters.fecha_hasta || undefined,
+          ...normalizedFilters,
           limit: 100
         }),
         getCategoriasAsientos(),
-        getAsientosStats(filters),
-        getAsientosPorCategoria(filters),
-        getAsientosPorMes(filters)
+        getAsientosStats(normalizedFilters),
+        getAsientosPorCategoria(normalizedFilters),
+        getAsientosPorMes(normalizedFilters)
       ])
       setAsientos(asientosData || [])
       setCategorias(categoriasData || [])
