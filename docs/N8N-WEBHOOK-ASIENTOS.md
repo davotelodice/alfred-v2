@@ -422,6 +422,8 @@ Usa expresiones de n8n para generar dinámicamente el JSON. Aquí tienes ejemplo
 - `"La categoría contable ING999 no existe o no está activa"`
 - `"El tipo_movimiento (gasto) no coincide con el tipo de la categoría ING001 (ingreso)"`
 
+**⚠️ EXCEPCIÓN:** La categoría `OTR001` (Otros movimientos o sin clasificar) acepta cualquier tipo de movimiento (`ingreso`, `gasto` u `otro`). Esto permite clasificar movimientos ambiguos o que no encajan claramente en otras categorías.
+
 #### Error 401 - Token Inválido
 
 ```json
@@ -530,6 +532,7 @@ El webhook valida automáticamente:
 - ✅ Usuario existe en la base de datos (buscado por `chat_id`)
 - ✅ Categoría existe en el catálogo y está activa
 - ✅ `tipo_movimiento` coincide con el tipo de la categoría seleccionada
+- ⚠️ **EXCEPCIÓN:** La categoría `OTR001` acepta cualquier tipo de movimiento (`ingreso`, `gasto` u `otro`)
 
 ---
 

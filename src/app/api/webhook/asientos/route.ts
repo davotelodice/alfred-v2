@@ -168,7 +168,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Validar que tipo_movimiento coincide con el tipo de la categoría
-    if (categoria.tipo_movimiento !== webhookData.tipo_movimiento) {
+    // EXCEPCIÓN: OTR001 acepta cualquier tipo_movimiento (ingreso, gasto u otro)
+    if (categoria.tipo_movimiento !== webhookData.tipo_movimiento && webhookData.categoria_contable !== 'OTR001') {
       const response: ApiResponse = {
         success: false,
         error: `El tipo_movimiento (${webhookData.tipo_movimiento}) no coincide con el tipo de la categoría ${webhookData.categoria_contable} (${categoria.tipo_movimiento})`
