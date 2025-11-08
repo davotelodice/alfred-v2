@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge'
 import { 
   Plus, 
   RefreshCw, 
-  Calendar,
   ArrowLeft,
   Edit,
   Trash2,
@@ -53,13 +52,7 @@ export default function AsientosPage() {
     fuente_datos: 'manual'
   })
 
-  useEffect(() => {
-    if (user) {
-      loadData()
-    }
-  }, [user, filters])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setIsLoading(true)
       const [asientosData, categoriasData] = await Promise.all([
@@ -80,7 +73,13 @@ export default function AsientosPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [filters])
+
+  useEffect(() => {
+    if (user) {
+      loadData()
+    }
+  }, [user, filters, loadData])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -243,7 +242,7 @@ export default function AsientosPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Movimiento</label>
                 <select
                   value={filters.tipo_movimiento}
-                  onChange={(e) => setFilters({ ...filters, tipo_movimiento: e.target.value as any })}
+                  onChange={(e) => setFilters({ ...filters, tipo_movimiento: e.target.value as '' | 'ingreso' | 'gasto' | 'otro' })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 >
                   <option value="">Todos</option>
@@ -331,7 +330,7 @@ export default function AsientosPage() {
                     <select
                       value={formData.tipo_movimiento}
                       onChange={(e) => {
-                        setFormData({ ...formData, tipo_movimiento: e.target.value as any, categoria_contable: '' })
+                        setFormData({ ...formData, tipo_movimiento: e.target.value as 'ingreso' | 'gasto' | 'otro', categoria_contable: '' })
                       }}
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
