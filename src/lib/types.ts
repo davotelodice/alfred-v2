@@ -83,6 +83,81 @@ export interface ContableAuditLog {
 }
 
 // =====================================================
+// TIPOS PARA ASIENTOS CONTABLES UNIVERSALES
+// =====================================================
+
+export interface ContableCategoriaAsiento {
+  codigo: string
+  nombre: string
+  tipo_movimiento: 'ingreso' | 'gasto' | 'otro'
+  descripcion?: string
+  ejemplos?: string[]
+  activo: boolean
+  created_at: string
+}
+
+export interface ContableAsiento {
+  id_asiento: string
+  fecha: string
+  descripcion: string
+  tipo_movimiento: 'ingreso' | 'gasto' | 'otro'
+  categoria_contable: string
+  monto: number
+  moneda: string
+  cuenta_origen: string
+  cuenta_destino?: string
+  saldo_posterior?: number
+  referencia?: string
+  fuente_datos: string
+  user_id: string
+  account_id?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateAsientoRequest {
+  id_asiento?: string // Opcional - se genera automáticamente si no se proporciona
+  fecha: string
+  descripcion: string
+  tipo_movimiento: 'ingreso' | 'gasto' | 'otro'
+  categoria_contable: string
+  monto: number
+  moneda?: string
+  cuenta_origen: string
+  cuenta_destino?: string
+  saldo_posterior?: number
+  referencia?: string
+  fuente_datos?: string
+  user_id: string
+  account_id?: string
+}
+
+export interface UpdateAsientoRequest {
+  fecha?: string
+  descripcion?: string
+  tipo_movimiento?: 'ingreso' | 'gasto' | 'otro'
+  categoria_contable?: string
+  monto?: number
+  moneda?: string
+  cuenta_origen?: string
+  cuenta_destino?: string
+  saldo_posterior?: number
+  referencia?: string
+  fuente_datos?: string
+  account_id?: string
+}
+
+export interface AsientoFilters {
+  fecha_desde?: string
+  fecha_hasta?: string
+  categoria_contable?: string
+  tipo_movimiento?: 'ingreso' | 'gasto' | 'otro'
+  cuenta_origen?: string
+  limit?: number
+  offset?: number
+}
+
+// =====================================================
 // TIPOS PARA API RESPONSES
 // =====================================================
 
@@ -140,6 +215,24 @@ export interface N8nWebhookData {
   categoria?: string
   fecha: string // REQUERIDO
   metodo_pago?: string
+}
+
+export interface N8nAsientoWebhookData {
+  chat_id: string // OBLIGATORIO - ID del chat de Telegram
+  user_id?: string // OPCIONAL - si se proporciona, se usa directamente
+  id_asiento?: string // OPCIONAL - se genera automáticamente si no se proporciona
+  fecha: string // OBLIGATORIO - formato YYYY-MM-DD
+  descripcion: string // OBLIGATORIO
+  tipo_movimiento: 'ingreso' | 'gasto' | 'otro' // OBLIGATORIO
+  categoria_contable: string // OBLIGATORIO - debe existir en catálogo
+  monto: number // OBLIGATORIO - debe ser > 0
+  moneda?: string // OPCIONAL - default: "EUR"
+  cuenta_origen: string // OBLIGATORIO - IBAN o nombre
+  cuenta_destino?: string // OPCIONAL
+  saldo_posterior?: number // OPCIONAL
+  referencia?: string // OPCIONAL
+  fuente_datos?: string // OPCIONAL - default: "n8n"
+  telefono?: string // OPCIONAL - se actualiza si es diferente al del usuario
 }
 
 export interface N8nQueryRequest {
