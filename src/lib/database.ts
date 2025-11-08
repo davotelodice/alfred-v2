@@ -304,3 +304,179 @@ export async function deleteAsiento(id: string) {
 
   if (error) throw error
 }
+
+// =====================================================
+// FUNCIONES PARA ANÁLISIS Y GRÁFICOS DE ASIENTOS
+// =====================================================
+
+export interface AsientoStats {
+  total_ingresos: number
+  total_gastos: number
+  balance: number
+  cantidad_transacciones: number
+}
+
+export interface AsientoPorCategoria {
+  categoria_contable: string
+  nombre_categoria: string
+  tipo_movimiento: string
+  total_monto: number
+  cantidad: number
+}
+
+export interface AsientoPorMes {
+  mes: string
+  año: string
+  periodo: string
+  ingresos: number
+  gastos: number
+  balance: number
+}
+
+export async function getAsientosStats(filters: AsientoFilters = {}): Promise<AsientoStats> {
+  let query = supabase
+    .from('contable_asientos')
+    .select('tipo_movimiento, monto')
+
+  if (filters.fecha_desde) {
+    query = query.gte('fecha', filters.fecha_desde)
+  }
+
+  if (filters.fecha_hasta) {
+    query = query.lte('fecha', filters.fecha_hasta)
+  }
+
+  if (filters.tipo_movimiento) {
+    query = query.eq('tipo_movimiento', filters.tipo_movimiento)
+  }
+
+  const { data, error } = await query
+
+  if (error) throw error
+
+  const stats: AsientoStats = {
+    total_ingresos: 0,
+    total_gastos: 0,
+    balance: 0,
+    cantidad_transacciones: data?.length || 0
+  }
+
+  data?.forEach(asiento => {
+    if (asiento.tipo_movimiento === 'ingreso') {
+      stats.total_ingresos += asiento.monto
+    } else if (asiento.tipo_movimiento === 'gasto') {
+      stats.total_gastos += asiento.monto
+    }
+  })
+
+  stats.balance = stats.total_ingresos - stats.total_gastos
+
+  return stats
+}
+
+export async function getAsientosPorCategoria(filters: AsientoFilters = {}): Promise<AsientoPorCategoria[]> {
+  let query = supabase
+    .from('contable_asientos')
+    .select('categoria_contable, tipo_movimiento, monto')
+
+  if (filters.fecha_desde) {
+    query = query.gte('fecha', filters.fecha_desde)
+  }
+
+  if (filters.fecha_hasta) {
+    query = query.lte('fecha', filters.fecha_hasta)
+  }
+
+  if (filters.tipo_movimiento) {
+    query = query.eq('tipo_movimiento', filters.tipo_movimiento)
+  }
+
+  const { data, error } = await query
+
+  if (error) throw error
+
+  // Obtener nombres de categorías
+  const { data: categorias } = await supabase
+    .from('contable_categorias_asientos')
+    .select('codigo, nombre')
+
+  const categoriaMap = new Map<string, string>()
+  categorias?.forEach(cat => {
+    categoriaMap.set(cat.codigo, cat.nombre)
+  })
+
+  // Agrupar por categoría
+  const grouped = new Map<string, AsientoPorCategoria>()
+
+  data?.forEach(asiento => {
+    const key = asiento.categoria_contable
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        categoria_contable: key,
+        nombre_categoria: categoriaMap.get(key) || key,
+        tipo_movimiento: asiento.tipo_movimiento,
+        total_monto: 0,
+        cantidad: 0
+      })
+    }
+
+    const item = grouped.get(key)!
+    item.total_monto += asiento.monto
+    item.cantidad += 1
+  })
+
+  return Array.from(grouped.values()).sort((a, b) => b.total_monto - a.total_monto)
+}
+
+export async function getAsientosPorMes(filters: AsientoFilters = {}): Promise<AsientoPorMes[]> {
+  let query = supabase
+    .from('contable_asientos')
+    .select('fecha, tipo_movimiento, monto')
+    .order('fecha', { ascending: true })
+
+  if (filters.fecha_desde) {
+    query = query.gte('fecha', filters.fecha_desde)
+  }
+
+  if (filters.fecha_hasta) {
+    query = query.lte('fecha', filters.fecha_hasta)
+  }
+
+  const { data, error } = await query
+
+  if (error) throw error
+
+  // Agrupar por mes
+  const grouped = new Map<string, AsientoPorMes>()
+
+  data?.forEach(asiento => {
+    const fecha = new Date(asiento.fecha)
+    const año = fecha.getFullYear().toString()
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0')
+    const periodo = `${año}-${mes}`
+
+    if (!grouped.has(periodo)) {
+      grouped.set(periodo, {
+        mes,
+        año,
+        periodo,
+        ingresos: 0,
+        gastos: 0,
+        balance: 0
+      })
+    }
+
+    const item = grouped.get(periodo)!
+    if (asiento.tipo_movimiento === 'ingreso') {
+      item.ingresos += asiento.monto
+    } else if (asiento.tipo_movimiento === 'gasto') {
+      item.gastos += asiento.monto
+    }
+    item.balance = item.ingresos - item.gastos
+  })
+
+  return Array.from(grouped.values()).sort((a, b) => {
+    if (a.año !== b.año) return a.año.localeCompare(b.año)
+    return a.mes.localeCompare(b.mes)
+  })
+}

@@ -5,24 +5,62 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Plus, 
-  RefreshCw, 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Plus,
+  RefreshCw,
   ArrowLeft,
   Edit,
   Trash2,
   FileText,
-  Filter
+  Filter,
+  Eye,
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  PieChart,
+  Calendar
 } from 'lucide-react'
-import { 
+import {
   getUserAsientos,
   getCategoriasAsientos,
   createAsiento,
   updateAsiento,
-  deleteAsiento
+  deleteAsiento,
+  getAsientosStats,
+  getAsientosPorCategoria,
+  getAsientosPorMes,
+  type AsientoStats,
+  type AsientoPorCategoria,
+  type AsientoPorMes
 } from '@/lib/database'
 import { useAuth } from '@/components/AuthProvider'
 import type { ContableAsiento, ContableCategoriaAsiento } from '@/lib/types'
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  AreaChart,
+  Area
+} from 'recharts'
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#FF7C7C']
 
 export default function AsientosPage() {
   const { user } = useAuth()
@@ -31,7 +69,11 @@ export default function AsientosPage() {
   const [categorias, setCategorias] = useState<ContableCategoriaAsiento[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [viewingAsiento, setViewingAsiento] = useState<ContableAsiento | null>(null)
   const [editingAsiento, setEditingAsiento] = useState<ContableAsiento | null>(null)
+  const [stats, setStats] = useState<AsientoStats | null>(null)
+  const [porCategoria, setPorCategoria] = useState<AsientoPorCategoria[]>([])
+  const [porMes, setPorMes] = useState<AsientoPorMes[]>([])
   const [filters, setFilters] = useState({
     tipo_movimiento: '' as '' | 'ingreso' | 'gasto' | 'otro',
     categoria_contable: '',
@@ -55,7 +97,7 @@ export default function AsientosPage() {
   const loadData = useCallback(async () => {
     try {
       setIsLoading(true)
-      const [asientosData, categoriasData] = await Promise.all([
+      const [asientosData, categoriasData, statsData, categoriaData, mesData] = await Promise.all([
         getUserAsientos({
           ...filters,
           tipo_movimiento: filters.tipo_movimiento || undefined,
@@ -64,10 +106,16 @@ export default function AsientosPage() {
           fecha_hasta: filters.fecha_hasta || undefined,
           limit: 100
         }),
-        getCategoriasAsientos()
+        getCategoriasAsientos(),
+        getAsientosStats(filters),
+        getAsientosPorCategoria(filters),
+        getAsientosPorMes(filters)
       ])
       setAsientos(asientosData || [])
       setCategorias(categoriasData || [])
+      setStats(statsData)
+      setPorCategoria(categoriaData)
+      setPorMes(mesData)
     } catch (error) {
       console.error('Error al cargar asientos:', error)
     } finally {
@@ -141,6 +189,10 @@ export default function AsientosPage() {
     setShowForm(true)
   }
 
+  const handleView = (asiento: ContableAsiento) => {
+    setViewingAsiento(asiento)
+  }
+
   const handleDelete = async (id: string) => {
     if (!confirm('¿Estás seguro de que quieres eliminar este asiento?')) return
     try {
@@ -181,9 +233,22 @@ export default function AsientosPage() {
     }
   }
 
-  const categoriasFiltradas = categorias.filter(c => 
+  const categoriasFiltradas = categorias.filter(c =>
     !filters.tipo_movimiento || c.tipo_movimiento === filters.tipo_movimiento
   )
+
+  // Preparar datos para gráficos
+  const topGastos = porCategoria
+    .filter(c => c.tipo_movimiento === 'gasto')
+    .slice(0, 5)
+
+  const topIngresos = porCategoria
+    .filter(c => c.tipo_movimiento === 'ingreso')
+    .slice(0, 5)
+
+  const distribucionGastos = porCategoria
+    .filter(c => c.tipo_movimiento === 'gasto')
+    .slice(0, 8)
 
   if (!user) {
     return (
@@ -199,7 +264,7 @@ export default function AsientosPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
-            <Button 
+            <Button
               onClick={() => router.push('/dashboard')}
               variant="outline"
               size="sm"
@@ -215,7 +280,7 @@ export default function AsientosPage() {
               <p className="text-gray-600 mt-1">Gestiona tus asientos contables categorizados</p>
             </div>
           </div>
-          <Button 
+          <Button
             onClick={() => {
               resetForm()
               setEditingAsiento(null)
@@ -226,6 +291,191 @@ export default function AsientosPage() {
             <Plus className="h-4 w-4" />
             Nuevo Asiento
           </Button>
+        </div>
+
+        {/* Estadísticas Resumidas */}
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Total Ingresos</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {stats.total_ingresos.toFixed(2)} EUR
+                    </p>
+                  </div>
+                  <TrendingUp className="h-8 w-8 text-green-600" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Total Gastos</p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {stats.total_gastos.toFixed(2)} EUR
+                    </p>
+                  </div>
+                  <TrendingDown className="h-8 w-8 text-red-600" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Balance</p>
+                    <p className={`text-2xl font-bold ${stats.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {stats.balance.toFixed(2)} EUR
+                    </p>
+                  </div>
+                  <BarChart3 className="h-8 w-8 text-gray-600" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Transacciones</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {stats.cantidad_transacciones}
+                    </p>
+                  </div>
+                  <FileText className="h-8 w-8 text-gray-600" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Gráficos */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Gráfico: Ingresos vs Gastos por Mes */}
+          {porMes.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Ingresos vs Gastos por Mes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={porMes}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="periodo"
+                      tickFormatter={(value) => {
+                        const [year, month] = value.split('-')
+                        const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+                        return `${monthNames[parseInt(month) - 1]} ${year}`
+                      }}
+                    />
+                    <YAxis />
+                    <Tooltip
+                      formatter={(value: number) => `${value.toFixed(2)} EUR`}
+                    />
+                    <Legend />
+                    <Area type="monotone" dataKey="ingresos" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.6} name="Ingresos" />
+                    <Area type="monotone" dataKey="gastos" stackId="1" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} name="Gastos" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Gráfico: Balance Mensual */}
+          {porMes.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Balance Mensual
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={porMes}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="periodo"
+                      tickFormatter={(value) => {
+                        const [year, month] = value.split('-')
+                        const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+                        return `${monthNames[parseInt(month) - 1]} ${year}`
+                      }}
+                    />
+                    <YAxis />
+                    <Tooltip
+                      formatter={(value: number) => `${value.toFixed(2)} EUR`}
+                    />
+                    <Legend />
+                    <Line type="monotone" dataKey="balance" stroke="#3b82f6" strokeWidth={2} name="Balance" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Gráfico: Top 5 Categorías de Gastos */}
+          {topGastos.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Top 5 Categorías de Gastos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={topGastos} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" />
+                    <YAxis dataKey="nombre_categoria" type="category" width={150} />
+                    <Tooltip formatter={(value: number) => `${value.toFixed(2)} EUR`} />
+                    <Bar dataKey="total_monto" fill="#ef4444" name="Total" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Gráfico: Distribución de Gastos por Categoría */}
+          {distribucionGastos.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PieChart className="h-5 w-5" />
+                  Distribución de Gastos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <RechartsPieChart>
+                    <Pie
+                      data={distribucionGastos}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ nombre_categoria, percent }) => `${nombre_categoria}: ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="total_monto"
+                      nameKey="nombre_categoria"
+                    >
+                      {distribucionGastos.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: number) => `${value.toFixed(2)} EUR`} />
+                  </RechartsPieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Filtros */}
@@ -286,7 +536,7 @@ export default function AsientosPage() {
               </div>
             </div>
             <div className="mt-4 flex gap-2">
-              <Button 
+              <Button
                 onClick={loadData}
                 variant="outline"
                 size="sm"
@@ -295,7 +545,7 @@ export default function AsientosPage() {
                 <RefreshCw className="h-4 w-4" />
                 Actualizar
               </Button>
-              <Button 
+              <Button
                 onClick={() => setFilters({ tipo_movimiento: '', categoria_contable: '', fecha_desde: '', fecha_hasta: '' })}
                 variant="outline"
                 size="sm"
@@ -441,7 +691,7 @@ export default function AsientosPage() {
                   <Button type="submit">
                     {editingAsiento ? 'Actualizar' : 'Crear'} Asiento
                   </Button>
-                  <Button 
+                  <Button
                     type="button"
                     variant="outline"
                     onClick={() => {
@@ -458,6 +708,119 @@ export default function AsientosPage() {
           </Card>
         )}
 
+        {/* Modal de Visualización */}
+        <Dialog open={!!viewingAsiento} onOpenChange={() => setViewingAsiento(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Detalles del Asiento Contable</DialogTitle>
+              <DialogDescription>
+                Información completa de la transacción
+              </DialogDescription>
+            </DialogHeader>
+            {viewingAsiento && (
+              <div className="space-y-4 mt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">ID Asiento</p>
+                    <p className="text-base font-mono">{viewingAsiento.id_asiento}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Fecha</p>
+                    <p className="text-base">{new Date(viewingAsiento.fecha).toLocaleDateString('es-ES', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Tipo de Movimiento</p>
+                    <Badge className={getTipoColor(viewingAsiento.tipo_movimiento)}>
+                      {viewingAsiento.tipo_movimiento}
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Categoría</p>
+                    <p className="text-base">{getCategoriaNombre(viewingAsiento.categoria_contable)}</p>
+                    <p className="text-xs text-gray-500">({viewingAsiento.categoria_contable})</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Monto</p>
+                    <p className="text-2xl font-bold">
+                      {viewingAsiento.monto.toFixed(2)} {viewingAsiento.moneda}
+                    </p>
+                  </div>
+                  {viewingAsiento.saldo_posterior && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Saldo Posterior</p>
+                      <p className="text-base font-semibold">
+                        {viewingAsiento.saldo_posterior.toFixed(2)} {viewingAsiento.moneda}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-1">Descripción</p>
+                  <p className="text-base bg-gray-50 p-3 rounded-md">{viewingAsiento.descripcion}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Cuenta Origen</p>
+                    <p className="text-base font-mono text-sm break-all">{viewingAsiento.cuenta_origen}</p>
+                  </div>
+                  {viewingAsiento.cuenta_destino && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Cuenta Destino</p>
+                      <p className="text-base break-all">{viewingAsiento.cuenta_destino}</p>
+                    </div>
+                  )}
+                </div>
+                {(viewingAsiento.referencia || viewingAsiento.fuente_datos) && (
+                  <div className="grid grid-cols-2 gap-4">
+                    {viewingAsiento.referencia && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Referencia</p>
+                        <p className="text-base font-mono text-sm">{viewingAsiento.referencia}</p>
+                      </div>
+                    )}
+                    {viewingAsiento.fuente_datos && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Fuente de Datos</p>
+                        <p className="text-base">{viewingAsiento.fuente_datos}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="pt-4 border-t">
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => {
+                        handleEdit(viewingAsiento)
+                        setViewingAsiento(null)
+                      }}
+                      variant="outline"
+                      className="flex items-center gap-2"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Editar
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setViewingAsiento(null)
+                        handleDelete(viewingAsiento.id_asiento)
+                      }}
+                      variant="outline"
+                      className="text-red-600 hover:text-red-700 flex items-center gap-2"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Eliminar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
         {/* Lista de Asientos */}
         <Card>
           <CardHeader>
@@ -473,7 +836,7 @@ export default function AsientosPage() {
               <div className="text-center py-8">
                 <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                 <p className="text-gray-600">No hay asientos contables registrados</p>
-                <Button 
+                <Button
                   onClick={() => setShowForm(true)}
                   className="mt-4"
                 >
@@ -518,9 +881,19 @@ export default function AsientosPage() {
                         <td className="p-2">
                           <div className="flex gap-2">
                             <Button
+                              onClick={() => handleView(asiento)}
+                              variant="outline"
+                              size="sm"
+                              className="flex items-center gap-1"
+                              title="Ver detalles"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
                               onClick={() => handleEdit(asiento)}
                               variant="outline"
                               size="sm"
+                              title="Editar"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -529,6 +902,7 @@ export default function AsientosPage() {
                               variant="outline"
                               size="sm"
                               className="text-red-600 hover:text-red-700"
+                              title="Eliminar"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -546,4 +920,3 @@ export default function AsientosPage() {
     </div>
   )
 }
-
