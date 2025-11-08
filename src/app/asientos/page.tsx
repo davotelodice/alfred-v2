@@ -242,10 +242,6 @@ export default function AsientosPage() {
     .filter(c => c.tipo_movimiento === 'gasto')
     .slice(0, 5)
 
-  const topIngresos = porCategoria
-    .filter(c => c.tipo_movimiento === 'ingreso')
-    .slice(0, 5)
-
   const distribucionGastos = porCategoria
     .filter(c => c.tipo_movimiento === 'gasto')
     .slice(0, 8)
