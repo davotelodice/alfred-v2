@@ -63,7 +63,7 @@ El JSON debe ser un objeto directo, NO dentro de un array ni con una clave "JSON
 5. **LLAMA A LA HERRAMIENTA `HTTP_REQUEST2`** con:
    - URL: https://TU-PROYECTO.vercel.app/api/webhook/n8n
    - Método: POST
-   - Headers: Authorization: Bearer 2b240ebc4588827cc1652007b4f42750283b91063cbc644741370081fb7ae6da, Content-Type: application/json
+   - Headers: Authorization: Bearer TU_WEBHOOK_SECRET_TOKEN, Content-Type: application/json
    - Body: El JSON generado DIRECTAMENTE (objeto JSON simple, sin array, sin clave "JSON")
    
 **⚠️ CRÍTICO:** El Body debe ser el objeto JSON directamente:
@@ -395,7 +395,7 @@ Cuando recibas un mensaje del usuario:
    i. **LLAMAR A LA HERRAMIENTA `HTTP_REQUEST2`** con:
       - URL: https://TU-PROYECTO.vercel.app/api/webhook/n8n
       - Method: POST
-      - Headers: Authorization: Bearer 2b240ebc4588827cc1652007b4f42750283b91063cbc644741370081fb7ae6da, Content-Type: application/json
+      - Headers: Authorization: Bearer TU_WEBHOOK_SECRET_TOKEN, Content-Type: application/json
       - Body: El JSON generado
 4. **Retornar la respuesta del webhook al usuario**
 
@@ -439,7 +439,7 @@ Teléfono del chat: "+34612345678"
    - URL: https://TU-PROYECTO.vercel.app/api/webhook/n8n
    - Method: POST
    - Headers: 
-     - Authorization: Bearer 2b240ebc4588827cc1652007b4f42750283b91063cbc644741370081fb7ae6da
+     - Authorization: Bearer TU_WEBHOOK_SECRET_TOKEN
      - Content-Type: application/json
    - Body: **ENVÍA SOLO EL OBJETO JSON DIRECTAMENTE** (sin array, sin clave "JSON"):
 ```json
@@ -511,7 +511,7 @@ IMPORTANTE:
 - URL: https://TU-PROYECTO.vercel.app/api/webhook/n8n (o http://localhost:3000 si es desarrollo local)
 - Method: POST
 - Headers: 
-  - Authorization: Bearer 2b240ebc4588827cc1652007b4f42750283b91063cbc644741370081fb7ae6da
+  - Authorization: Bearer TU_WEBHOOK_SECRET_TOKEN
   - Content-Type: application/json
 - Body: **DEBE SER UN OBJETO JSON DIRECTO** (NO array, NO con clave "JSON")
 
@@ -545,7 +545,7 @@ Usuario: "Gasté 50 euros en supermercado"
    - URL: https://TU-PROYECTO.vercel.app/api/webhook/n8n (o https://TU-PROYECTO.vercel.app/api/webhook/n8n si es desarrollo local)
    - Method: POST
    - Headers: 
-     - Authorization: Bearer 2b240ebc4588827cc1652007b4f42750283b91063cbc644741370081fb7ae6da
+     - Authorization: Bearer TU_WEBHOOK_SECRET_TOKEN
      - Content-Type: application/json
    - Body: {"telefono": "+34612345678", "tipo": "gasto", "monto": 50.00, "descripcion": "supermercado", "fecha": "2024-10-23"}
    
@@ -577,7 +577,7 @@ Usuario: "Gasté 50 euros en supermercado"
 
 **Headers:**
 ```
-Authorization: Bearer 2b240ebc4588827cc1652007b4f42750283b91063cbc644741370081fb7ae6da
+Authorization: Bearer TU_WEBHOOK_SECRET_TOKEN
 Content-Type: application/json
 ```
 
