@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getCategoriasAsientosServer } from '@/lib/database-server'
 import type { ApiResponse } from '@/lib/types'
 
+export const dynamic = 'force-dynamic'
+
 // GET /api/asientos/categorias - Obtener catálogo de categorías contables
 export async function GET(request: NextRequest) {
   try {
