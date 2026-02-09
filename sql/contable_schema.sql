@@ -466,3 +466,4 @@ BEGIN
   RAISE NOTICE '✅ Base de datos configurada correctamente. Tablas creadas: %', table_count;
 END $$;
 
+

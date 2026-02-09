@@ -460,3 +460,4 @@ El sistema devuelve un JSON con la siguiente estructura:
 - **[N8N-SETUP.md](N8N-SETUP.md)**: Guía completa de configuración de n8n
 - **[N8N-AGENT-PROMPT.md](N8N-AGENT-PROMPT.md)**: Prompt del sistema para el Agente IA
 
+

@@ -237,3 +237,4 @@ When Executed by Another Workflow → HTTP Request → Edit Fields
 - **[N8N-SETUP.md](N8N-SETUP.md)**: Guía completa de configuración de n8n
 - **[N8N-AGENT-PROMPT-ASIENTOS.md](N8N-AGENT-PROMPT-ASIENTOS.md)**: Prompt del sistema para procesar extractos bancarios
 
+

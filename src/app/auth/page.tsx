@@ -86,7 +86,14 @@ export default function AuthPage() {
           // No lanzamos error aquí porque el usuario ya se creó en auth
         }
 
-        setSuccess('Cuenta creada exitosamente. Revisa tu email para confirmar.')
+        // Enviar email de bienvenida (no bloquea el mensaje de éxito)
+        fetch('/api/auth/send-welcome-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: formData.email, nombre: formData.nombre }),
+        }).catch(() => {})
+
+        setSuccess('Cuenta creada exitosamente. Te hemos enviado un email de bienvenida.')
       }
     } catch (err) {
       const error = err as Error
@@ -212,6 +219,17 @@ export default function AuthPage() {
               >
                 {isLoading ? 'Procesando...' : (isLogin ? 'Iniciar Sesión' : 'Crear Cuenta')}
               </Button>
+
+              {isLogin && (
+                <div className="text-center">
+                  <a
+                    href="/auth/forgot-password"
+                    className="text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </a>
+                </div>
+              )}
             </form>
 
             <div className="mt-6 text-center">

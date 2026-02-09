@@ -58,6 +58,16 @@ Aquí encontrarás toda la documentación relevante para entender, configurar y 
 
 ---
 
+## 🔐 AUTENTICACIÓN Y CORREOS (Supabase self-hosted)
+
+-   **[PLAN DE AUTH Y RECUPERACIÓN DE CONTRASEÑA (PLAN-AUTH-EMAIL-RECOVERY.md)](PLAN-AUTH-EMAIL-RECOVERY.md)**
+    -   Plan ejecutado: recuperación de contraseña, envío de emails por SMTP (Hostinger), Edge Functions y flujo en la app.
+
+-   **[VARIABLES DE ENTORNO PARA EDGE FUNCTIONS (VARIABLES-ENTORNO-EDGE-FUNCTIONS.md)](VARIABLES-ENTORNO-EDGE-FUNCTIONS.md)**
+    -   Cómo añadir SMTP y secret al servicio `functions` (Portainer o compose). Incluye qué es el servicio "functions".
+
+---
+
 ## 🔒 AUDITORÍA DE SEGURIDAD
 
 -   **[INFORME DE AUDITORÍA DE SEGURIDAD (SECURITY-AUDIT.md)](../SECURITY-AUDIT.md)**

@@ -66,6 +66,9 @@ OPENAI_MODEL=gpt-4o-mini
 
 # Webhooks (Genera un token seguro)
 WEBHOOK_SECRET_TOKEN=tu-token-secreto-para-webhooks
+
+# Recuperación de contraseña y emails (mismo valor que en Supabase Edge Functions)
+EDGE_FUNCTION_EMAIL_SECRET=tu-secret-generado-con-openssl-rand-hex-32
 ```
 
 **⚠️ IMPORTANTE**: 
@@ -98,7 +101,8 @@ Consulta el [índice de documentación](docs/README.md) para ver todos los docum
 **Documentos principales:**
 - **[DATABASE-SETUP.md](docs/DATABASE-SETUP.md)**: Script SQL completo para crear la base de datos
 - **[N8N-SETUP.md](docs/N8N-SETUP.md)**: Guía completa de configuración de n8n
-- **[DATABASE-SCHEMA.md](docs/DATABASE-SCHEMA.md)**: Documentación del esquema de base de datos
+- **[PLAN-AUTH-EMAIL-RECOVERY.md](docs/PLAN-AUTH-EMAIL-RECOVERY.md)**: Recuperación de contraseña y envío de emails (Edge Functions + SMTP)
+- **[VARIABLES-ENTORNO-EDGE-FUNCTIONS.md](docs/VARIABLES-ENTORNO-EDGE-FUNCTIONS.md)**: Variables para el servicio `functions` (SMTP, secret)
 
 ## 🏗️ Estructura del Proyecto
 
