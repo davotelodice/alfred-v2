@@ -53,7 +53,8 @@ Deno.serve(async (req) => {
   // 1) Generar enlace de recuperación con GoTrue Admin
   const authUrl = supabaseUrl.includes("http") ? supabaseUrl : `http://${supabaseUrl}`;
   const generateLinkUrl = `${authUrl}/auth/v1/admin/generate_link`;
-  const redirectTo = body.redirect_to ?? "";
+  // Usar redirect del cliente o, si falta, APP_URL del servidor (p. ej. https://alfred.seoescalaia.com/auth/reset-password)
+  const redirectTo = (body.redirect_to?.trim() || Deno.env.get("APP_URL") || "").trim();
 
   let actionLink: string;
   try {
