@@ -53,12 +53,20 @@ Deno.serve(async (req) => {
     );
   }
 
-  // 1) Generar enlace de confirmación de signup con GoTrue Admin
-  // type: "signup" crea el usuario si no existe y devuelve el action_link
   const authUrl = supabaseUrl.includes("http") ? supabaseUrl : `http://${supabaseUrl}`;
   const generateLinkUrl = `${authUrl}/auth/v1/admin/generate_link`;
-  // Usar redirect del cliente o, si falta, null (GoTrue usará el configurado default)
-  const redirectTo = (body.redirect_to?.trim() || "").trim();
+
+  // Usar redirect del cliente o, si falta, obtener el origin de APP_URL
+  const appUrl = Deno.env.get("APP_URL");
+  let defaultRedirect = "https://alfred.seoescalaia.com";
+  try {
+    if (appUrl) {
+      defaultRedirect = new URL(appUrl).origin;
+    }
+  } catch (e) {
+    console.error("Invalid APP_URL:", appUrl, e);
+  }
+  const redirectTo = (body.redirect_to?.trim() || defaultRedirect).trim();
 
   let actionLink: string;
   try {
